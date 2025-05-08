@@ -2,7 +2,11 @@
 
 namespace App\Controller;
 
+use App\Entity\Category;
+use App\Form\CategoryTypeForm;
+use App\Form\ArticleType;
 use App\Entity\Article;
+use App\Form\ArticleTypeForm;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -45,34 +49,21 @@ class IndexController extends AbstractController
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $article = new Article();
-
-        // Create the form to add a new article
-        $form = $this->createFormBuilder($article)
-            ->add('nom', TextType::class)
-            ->add('prix', TextType::class)
-            ->add('save', SubmitType::class, [
-                'label' => 'Créer'
-            ])
-            ->getForm();
-
-        // Handle form submission
+        $form = $this->createForm(ArticleTypeForm::class, $article);
         $form->handleRequest($request);
-
+    
         if ($form->isSubmitted() && $form->isValid()) {
-            // Save the new article
-            $article = $form->getData();
             $entityManager->persist($article);
             $entityManager->flush();
-
-            // Redirect to the article list page
+    
             return $this->redirectToRoute('article_list');
         }
-
-        // Render the form in the view
+    
         return $this->render('articles/new.html.twig', [
-            'form' => $form->createView()
+            'form' => $form->createView(),
         ]);
     }
+    
 
     #[Route('/article/{id}', name: 'article_show', methods: ['GET'])]
     public function show(int $id, ArticleRepository $articleRepository): Response
@@ -89,39 +80,27 @@ class IndexController extends AbstractController
     }
 
     #[Route('/article/edit/{id}', name: 'edit_article', methods: ['GET', 'POST'])]
-    public function edit(Request $request, EntityManagerInterface $entityManager, $id)
-    {
-        // Fetch the article from the database
-        $article = $entityManager->getRepository(Article::class)->find($id);
+public function edit(Request $request, int $id, EntityManagerInterface $entityManager): Response
+{
+    $article = $entityManager->getRepository(Article::class)->find($id);
 
-        if (!$article) {
-            throw $this->createNotFoundException('Article not found');
-        }
-
-        // Create the form
-        $form = $this->createFormBuilder($article)
-            ->add('nom', TextType::class)
-            ->add('prix', TextType::class)
-            ->add('save', SubmitType::class, [
-                'label' => 'Modifier'
-            ])
-            ->getForm();
-
-        // Handle the form submission
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
-            // Save changes
-            $entityManager->flush();
-
-            // Redirect to the article list page after saving
-            return $this->redirectToRoute('article_list');
-        }
-
-        // Render the form in the template
-        return $this->render('articles/edit.html.twig', [
-            'form' => $form->createView()
-        ]);
+    if (!$article) {
+        throw $this->createNotFoundException('Article not found');
     }
+
+    $form = $this->createForm(ArticleTypeForm::class, $article);
+    $form->handleRequest($request);
+
+    if ($form->isSubmitted() && $form->isValid()) {
+        $entityManager->flush();
+
+        return $this->redirectToRoute('article_list');
+    }
+
+    return $this->render('articles/edit.html.twig', [
+        'form' => $form->createView(),
+    ]);
+}
 
     #[Route('/article/delete/{id}', name: 'article_delete', methods: ['POST'])]
     public function delete(Request $request, Article $article, EntityManagerInterface $em): Response
@@ -132,5 +111,25 @@ class IndexController extends AbstractController
         }
         
         return $this->redirectToRoute('article_list');
+    }
+
+    #[Route('/category/newCat', name: 'new_category', methods: ['GET', 'POST'])]
+    public function newCategory(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $category = new Category();
+        $form = $this->createForm(CategoryTypeForm::class, $category);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->persist($category);
+            $entityManager->flush();
+
+            // Redirect or show success message
+            return $this->redirectToRoute('article_list');
+        }
+
+        return $this->render('articles/newCategory.html.twig', [
+            'form' => $form->createView(),
+        ]);
     }
 }
